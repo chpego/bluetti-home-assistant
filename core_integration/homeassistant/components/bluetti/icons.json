@@ -19,6 +19,23 @@
       "pvalltotalpower": {
         "default": "mdi:solar-power"
       }
+    },
+    "switch": {
+      "setctrlac": {
+        "default": "mdi:power-socket-us"
+      },
+      "setctrldc": {
+        "default": "mdi:car-battery"
+      },
+      "setctrlpoweron": {
+        "default": "mdi:power"
+      },
+      "setctrlpoweron-2": {
+        "default": "mdi:sleep"
+      },
+      "storm_mode_cloud_ctrl": {
+        "default": "mdi:weather-lightning"
+      }
     }
   }
 }
