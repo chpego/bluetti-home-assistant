@@ -1,5 +1,19 @@
 {
   "entity": {
+    "select": {
+      "invworkstate": {
+        "default": "mdi:solar-power"
+      },
+      "setaceco": {
+        "default": "mdi:power-plug"
+      },
+      "setctrlworkmode": {
+        "default": "mdi:cog"
+      },
+      "setdceco": {
+        "default": "mdi:flash"
+      }
+    },
     "sensor": {
       "acloadalltotalpower": {
         "default": "mdi:power-socket-eu"
