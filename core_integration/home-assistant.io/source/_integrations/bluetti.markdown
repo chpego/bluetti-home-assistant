@@ -9,6 +9,7 @@ ha_codeowners:
 ha_domain: bluetti
 ha_platforms:
   - diagnostics
+  - select
   - sensor
 ha_config_flow: true
 ha_integration_type: hub
@@ -16,7 +17,7 @@ ha_release: 2026.10
 ha_quality_scale: silver
 ---
 
-The **BLUETTI** {% term integration %} connects Home Assistant to your [BLUETTI](https://www.bluettipower.com/) portable power stations through the BLUETTI cloud service, letting you monitor battery levels and input/output power.
+The **BLUETTI** {% term integration %} connects Home Assistant to your [BLUETTI](https://www.bluettipower.com/) portable power stations through the BLUETTI cloud service, letting you monitor battery levels and input/output power, and choose the power station's work mode.
 
 ## Supported devices
 
@@ -43,6 +44,10 @@ The **BLUETTI** integration can provide the following entities, depending on wha
 - AC and DC output power.
 - Inverter status.
 
+### Selects
+
+- Work mode (for example Backup, Self-consumption, Peak, and Off-Peak, depending on the model).
+
 ## BLUETTI automation examples
 
 The real power of this integration is being notified about your power station's state without having to open the BLUETTI app.
@@ -66,20 +71,21 @@ automation:
           message: "The BLUETTI power station's battery is below 20%."
 ```
 
-### Automation: Notify when the power station starts drawing from the grid
+### Automation: Switch the power station to Silent mode at night
 
 ```yaml
 automation:
-  - alias: "Notify when the power station starts drawing from the grid"
+  - alias: "Switch the power station to Silent mode at night"
     triggers:
-      - trigger: numeric_state
-        entity_id: sensor.power_station_grid_input_power
-        above: 0
+      - trigger: time
+        at: "23:00:00"
     conditions: []
     actions:
-      - action: notify.mobile_app_your_phone
+      - action: select.select_option
+        target:
+          entity_id: select.power_station_work_mode
         data:
-          message: "The BLUETTI power station is drawing power from the grid."
+          option: "Silent"
 ```
 
 ## Data updates
