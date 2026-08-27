@@ -41,6 +41,11 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "online": {
+        "name": "Online"
+      }
+    },
     "sensor": {
       "ac_o_e_total": {
         "name": "Total AC Output Energy"

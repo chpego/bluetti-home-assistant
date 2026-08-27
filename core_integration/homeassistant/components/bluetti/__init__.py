@@ -31,6 +31,7 @@ from .oauth import AsyncConfigEntryAuth, AuthTokenRefresh
 __LOGGER__ = logging.getLogger(__name__)
 
 _PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
     Platform.SENSOR,
 ]
 
