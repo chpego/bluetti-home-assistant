@@ -10,13 +10,14 @@ ha_domain: bluetti
 ha_platforms:
   - diagnostics
   - sensor
+  - switch
 ha_config_flow: true
 ha_integration_type: hub
 ha_release: 2026.10
 ha_quality_scale: silver
 ---
 
-The **BLUETTI** {% term integration %} connects Home Assistant to your [BLUETTI](https://www.bluettipower.com/) portable power stations through the BLUETTI cloud service, letting you monitor battery levels and input/output power.
+The **BLUETTI** {% term integration %} connects Home Assistant to your [BLUETTI](https://www.bluettipower.com/) portable power stations through the BLUETTI cloud service, letting you monitor battery levels and input/output power, and control AC/DC outputs.
 
 ## Supported devices
 
@@ -43,6 +44,13 @@ The **BLUETTI** integration can provide the following entities, depending on wha
 - AC and DC output power.
 - Inverter status.
 
+### Switches
+
+- Main unit power.
+- AC output and DC output.
+- AC ECO mode and DC ECO mode.
+- Sleep mode.
+
 ## BLUETTI automation examples
 
 The real power of this integration is being notified about your power station's state without having to open the BLUETTI app.
@@ -66,20 +74,19 @@ automation:
           message: "The BLUETTI power station's battery is below 20%."
 ```
 
-### Automation: Notify when the power station starts drawing from the grid
+### Automation: Turn off the power station's AC output at night
 
 ```yaml
 automation:
-  - alias: "Notify when the power station starts drawing from the grid"
+  - alias: "Turn off the power station's AC output at night"
     triggers:
-      - trigger: numeric_state
-        entity_id: sensor.power_station_grid_input_power
-        above: 0
+      - trigger: time
+        at: "23:00:00"
     conditions: []
     actions:
-      - action: notify.mobile_app_your_phone
-        data:
-          message: "The BLUETTI power station is drawing power from the grid."
+      - action: switch.turn_off
+        target:
+          entity_id: switch.power_station_ac_output
 ```
 
 ## Data updates
