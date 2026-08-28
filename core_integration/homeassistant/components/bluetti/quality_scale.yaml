@@ -49,10 +49,10 @@ rules:
   # Gold
   devices: done
   diagnostics:
-    status: todo
+    status: done
     comment: >-
-      Deferred to a follow-up PR per reviewer feedback (keep the first PR
-      focused on OAuth2 + websocket data).
+      async_get_config_entry_diagnostics() redacts the token and cached
+      product list; device serial numbers are also redacted.
   discovery-update-info:
     status: exempt
     comment: Devices are added via the BLUETTI cloud account, not discovered.
