@@ -284,6 +284,12 @@ class BluettiDevice:
             try:
                 current_options = dict(entry.options)
                 current_devices = current_options.get("devices", [])
+                current_modbus = current_options.get("modbus", {})
+                new_modbus = {
+                    sn: cfg
+                    for sn, cfg in current_modbus.items()
+                    if sn != self.device_id
+                }
 
                 # Also drop the cached product entry - a re-bind would
                 # otherwise reuse this stale name/model instead of fetching
@@ -298,12 +304,19 @@ class BluettiDevice:
                 if self.device_id in current_devices:
                     new_devices = [d for d in current_devices if d != self.device_id]
 
-                    # One call for both data and options - two separate
-                    # calls would fire the entry's update listener twice.
+                    # A single async_update_entry() call for both data and
+                    # options - see the reload-count fix above for why a
+                    # separate call for each would be redundant (this entry
+                    # already has _async_update_listener registered from its
+                    # own setup, which reloads on any change either way).
                     hass.config_entries.async_update_entry(
                         entry,
                         data={**entry.data, "products": new_products},
-                        options={**current_options, "devices": new_devices},
+                        options={
+                            **current_options,
+                            "devices": new_devices,
+                            "modbus": new_modbus,
+                        },
                     )
                     __LOGGER__.debug(
                         "Removed device from configuration entry: %s", self.device_id
@@ -364,9 +377,9 @@ class BluettiDevice:
             elif persistence_ok:
                 __LOGGER__.warning("Device registry not found: %s", self.device_id)
 
-            # 5. Remove the device (and its coordinator) from the runtime
+            # 5. Remove the device (and its coordinators) from the runtime
             # data - only once persistence above actually succeeded, so a
-            # failed attempt leaves the coordinator running to retry.
+            # failed attempt leaves the coordinators running to retry.
             if persistence_ok:
                 try:
                     runtime_data = getattr(entry, "runtime_data", None)
@@ -381,6 +394,11 @@ class BluettiDevice:
                         )
                         if coordinator:
                             await coordinator.async_shutdown()
+                        modbus_coordinator = runtime_data.modbus_coordinators.pop(
+                            self.device_id, None
+                        )
+                        if modbus_coordinator:
+                            await modbus_coordinator.async_shutdown()
                         __LOGGER__.debug(
                             "Removed device from runtime data: %s", self.device_id
                         )

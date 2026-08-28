@@ -31,10 +31,10 @@
       },
       "select_devices": {
         "data": {
-          "devices": "[%key:component::bluetti::options::step::init::data::devices%]"
+          "devices": "[%key:component::bluetti::options::step::add_devices::data::devices%]"
         },
         "data_description": {
-          "devices": "[%key:component::bluetti::options::step::init::data_description::devices%]"
+          "devices": "[%key:component::bluetti::options::step::add_devices::data_description::devices%]"
         },
         "title": "Select BLUETTI devices"
       }
@@ -180,6 +180,9 @@
     "auth_expired": {
       "message": "BLUETTI authentication expired"
     },
+    "modbus_error": {
+      "message": "Error communicating with the device over Modbus: {error}"
+    },
     "setup_failed": {
       "message": "BLUETTI setup failed: {error}"
     },
@@ -203,7 +206,7 @@
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]"
     },
     "step": {
-      "init": {
+      "add_devices": {
         "data": {
           "devices": "Devices"
         },
@@ -212,6 +215,28 @@
         },
         "description": "Select any additional devices bound to your BLUETTI account that you want to add to Home Assistant.",
         "title": "Add BLUETTI devices"
+      },
+      "configure_modbus": {
+        "data": {
+          "device_sn": "Device",
+          "host": "Host",
+          "port": "Port"
+        },
+        "data_description": {
+          "device_sn": "The BLUETTI device this local Modbus connection belongs to.",
+          "host": "The IP address or hostname of the device's Modbus TCP interface.",
+          "port": "The TCP port the device's Modbus interface listens on."
+        },
+        "description": "Enter the local Modbus TCP connection details for this device. This is optional and supplements the cloud connection with additional sensors - it does not replace it.",
+        "title": "Configure local Modbus"
+      },
+      "init": {
+        "description": "What would you like to do?",
+        "menu_options": {
+          "add_devices": "Add BLUETTI devices",
+          "configure_modbus": "Configure local Modbus"
+        },
+        "title": "BLUETTI options"
       }
     }
   }
