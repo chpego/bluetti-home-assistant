@@ -5,10 +5,16 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any, override
 
-from pybluetti import ApplicationRuntimeException, ProductClient, UserProduct
+from pybluetti import (
+    ApplicationRuntimeException,
+    ProductClient,
+    UnifyResponse,
+    UserProduct,
+)
 
 from homeassistant.components import persistent_notification
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from .const import DOMAIN
@@ -183,6 +189,45 @@ class BluettiDevice:
             if s.fn_code == fn_code:
                 return s
         return None
+
+    async def set_state_value(self, fn_code: str, value: str) -> None:
+        """Send a control command to the device and notify the coordinator."""
+        state = self.get_state(fn_code)
+        if not state:
+            raise ValueError(f"No state with code {fn_code}")
+
+        assert self._api_client is not None, (
+            "set_state_value called before the device was wired up"
+        )
+        try:
+            result = await self._api_client.control_device(
+                {"sn": self.device_id, "fnCode": fn_code, "fnValue": value}
+            )
+        except Exception as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="command_failed",
+                translation_placeholders={
+                    "device_id": self.device_id,
+                    "error": str(err),
+                },
+            ) from err
+
+        # control_device() doesn't raise on a rejected command - check
+        # msgCode. Tracked upstream: bluetti-community/pybluetti#1.
+        if not (isinstance(result, UnifyResponse) and result.msgCode == 0):
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="command_rejected",
+                translation_placeholders={
+                    "device_id": self.device_id,
+                    "error": str(result),
+                },
+            )
+        state.set_value(value)
+
+        if self.coordinator:
+            self.coordinator.async_set_updated_data(self)
 
     # online/battery_level derive from stateList, which pybluetti.UserProduct
     # exposes untyped - candidates to move into the library eventually, but
