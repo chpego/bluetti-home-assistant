@@ -9,7 +9,7 @@ from modbus_connection.exceptions import ModbusConnectionError
 from homeassistant.components.bluetti.const import DOMAIN
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import OAuth2TokenRequestReauthError
+from homeassistant.exceptions import HomeAssistantError, OAuth2TokenRequestReauthError
 
 from tests.common import MockConfigEntry
 
@@ -562,6 +562,121 @@ async def test_async_setup_entry_wires_up_modbus_coordinator_for_capable_device(
     )
     assert "SN1" in entry.runtime_data.modbus_coordinators
     assert entry.runtime_data.modbus_coordinators["SN1"].last_update_success
+
+
+async def test_modbus_setup_skips_device_when_the_unit_is_already_taken(
+    hass: HomeAssistant,
+) -> None:
+    """A host/port already claimed by another config entry must not fail setup.
+
+    async_get_unit() raises HomeAssistantError when the same host/port is
+    already registered with different link settings by another config
+    entry - local Modbus is optional/supplementary here, so this must skip
+    just that device's Modbus rather than failing the whole entry over it.
+    """
+    entry = _entry(
+        hass,
+        products=[
+            {
+                "sn": "SN1",
+                "name": "Balco",
+                "stateList": [],
+                "online": "1",
+                "model": "Balco260",
+            }
+        ],
+        devices=["SN1"],
+        modbus={"SN1": {"host": "10.2.1.60", "port": 502}},
+    )
+    status_data = MagicMock(sn="SN1", isBindByCurUser="1", online="1", stateList=[])
+
+    with (
+        patch("homeassistant.components.bluetti.async_get_clientsession", MagicMock()),
+        patch(
+            "homeassistant.components.bluetti.config_entry_oauth2_flow.async_get_config_entry_implementation",
+            AsyncMock(return_value=MagicMock()),
+        ),
+        patch(
+            "homeassistant.components.bluetti.config_entry_oauth2_flow.OAuth2Session"
+        ) as mock_session_cls,
+        patch("homeassistant.components.bluetti.StompClient") as mock_stomp_cls,
+        patch("homeassistant.components.bluetti.ProductClient") as mock_product_cls,
+        patch(
+            "homeassistant.components.bluetti.async_get_unit",
+            side_effect=HomeAssistantError("unit already registered"),
+        ),
+    ):
+        mock_session_cls.return_value.token = {
+            "access_token": "tok",
+            "expires_at": time.time() + 10000,
+        }
+        mock_session_cls.return_value.async_ensure_token_valid = AsyncMock()
+        mock_stomp_cls.return_value.connect = AsyncMock()
+        mock_product_cls.return_value.get_device_status = AsyncMock(
+            return_value=MagicMock(data=[status_data])
+        )
+
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.runtime_data.modbus_coordinators == {}
+
+
+async def test_modbus_setup_skips_device_when_get_device_returns_none(
+    hass: HomeAssistant,
+) -> None:
+    """An unsupported dev_type must not fail setup or register a coordinator.
+
+    Defensive: modbus_dev_type_for_model() already restricts this to known
+    Modbus-capable models, but get_device() returning None must still be
+    handled explicitly rather than passing None into BluettiModbusCoordinator.
+    """
+    entry = _entry(
+        hass,
+        products=[
+            {
+                "sn": "SN1",
+                "name": "Balco",
+                "stateList": [],
+                "online": "1",
+                "model": "Balco260",
+            }
+        ],
+        devices=["SN1"],
+        modbus={"SN1": {"host": "10.2.1.60", "port": 502}},
+    )
+    status_data = MagicMock(sn="SN1", isBindByCurUser="1", online="1", stateList=[])
+
+    with (
+        patch("homeassistant.components.bluetti.async_get_clientsession", MagicMock()),
+        patch(
+            "homeassistant.components.bluetti.config_entry_oauth2_flow.async_get_config_entry_implementation",
+            AsyncMock(return_value=MagicMock()),
+        ),
+        patch(
+            "homeassistant.components.bluetti.config_entry_oauth2_flow.OAuth2Session"
+        ) as mock_session_cls,
+        patch("homeassistant.components.bluetti.StompClient") as mock_stomp_cls,
+        patch("homeassistant.components.bluetti.ProductClient") as mock_product_cls,
+        patch("homeassistant.components.bluetti.async_get_unit"),
+        patch("homeassistant.components.bluetti.get_device", return_value=None),
+    ):
+        mock_session_cls.return_value.token = {
+            "access_token": "tok",
+            "expires_at": time.time() + 10000,
+        }
+        mock_session_cls.return_value.async_ensure_token_valid = AsyncMock()
+        mock_stomp_cls.return_value.connect = AsyncMock()
+        mock_product_cls.return_value.get_device_status = AsyncMock(
+            return_value=MagicMock(data=[status_data])
+        )
+
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.runtime_data.modbus_coordinators == {}
 
 
 async def test_modbus_first_refresh_failure_does_not_prevent_cloud_entities_from_loading(

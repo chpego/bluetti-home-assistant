@@ -360,7 +360,7 @@ async def test_init_falls_through_to_add_devices_when_enabled_device_is_not_modb
         ) as mock_client_cls,
     ):
         mock_client_cls.return_value.get_user_products = AsyncMock(
-            return_value=SimpleNamespace(data=[])
+            return_value=SimpleNamespace(data=[], is_ok=lambda: True)
         )
         result = await flow.async_step_init(user_input=None)
 
@@ -643,7 +643,7 @@ async def test_add_devices_through_real_flow_manager_preserves_modbus(
         ) as mock_client_cls,
     ):
         mock_client_cls.return_value.get_user_products = AsyncMock(
-            return_value=SimpleNamespace(data=products)
+            return_value=SimpleNamespace(data=products, is_ok=lambda: True)
         )
         mock_client_cls.return_value.bind_devices = AsyncMock(
             return_value=UnifyResponse(msgId="1", msgCode=0)
